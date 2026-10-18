@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FakeLC.lol</title>
+<meta name="description" content="Kupuj i wystawiaj LC. Zamówienia przez Discord DM.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Układ: dwie kolumny jak ekran startowy - po lewej nagłówek i logowanie, po prawej orbita z diamentem LIVE. Po zalogowaniu panel w tym samym stylu. */
+:root{
+  --bg:#050608; --panel:#0a0e11; --panel-2:#0f151a; --line:rgba(243,255,20,.16); --line-2:rgba(255,255,255,.09);
+  --y:#f3ff14; --y-dim:rgba(243,255,20,.55); --fg:#fff; --muted:#8a949b; --ok:#38f0a0; --bad:#ff5d6c; --warn:#ffc94a;
+  --display:'Anton','Impact',sans-serif; --ui:'Barlow Condensed','Arial Narrow',sans-serif; --body:'Barlow',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --cut:14px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--fg);font:500 16px/1.55 var(--body);-webkit-font-smoothing:antialiased;background:var(--bg);
+  background-image:
+    radial-gradient(900px 600px at 80% 40%,rgba(243,255,20,.07),transparent 70%),
+    linear-gradient(rgba(243,255,20,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(243,255,20,.045) 1px,transparent 1px);
+  background-size:auto,64px 64px,64px 64px;background-attachment:fixed;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(30px + env(safe-area-inset-bottom,0px));overflow-x:hidden}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:400}
+.wrap{max-width:1180px;margin:0 auto}
+:focus-visible{outline:2px solid var(--y);outline-offset:3px}
+
+/* logo */
+.logo{display:inline-flex;align-items:center;gap:14px;text-decoration:none;font:700 26px var(--ui);letter-spacing:.06em;text-transform:none}
+.logo i{display:grid;place-items:center;width:46px;height:46px;border:2px solid var(--y);color:var(--y);font:700 24px var(--ui);transform:skewX(-10deg);box-shadow:0 0 18px rgba(243,255,20,.35),inset 0 0 12px rgba(243,255,20,.15)}
+.logo i b{transform:skewX(10deg);font-weight:700}
+.logo span em{font-style:normal;color:var(--y)}
+
+/* górny pasek po zalogowaniu */
+.top{display:none;align-items:center;gap:18px;padding:18px 0;border-bottom:1px solid var(--line-2);margin-bottom:34px}
+.top .logo{font-size:22px}.top .logo i{width:38px;height:38px;font-size:20px}
+body.in .top{display:flex}
+nav{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none;align-items:center}
+nav::-webkit-scrollbar{display:none}
+nav a,nav button{border:0;background:none;padding:9px 14px;cursor:pointer;text-decoration:none;font:600 16px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;transition:color .2s}
+nav a:hover,nav button:hover{color:var(--fg)}
+nav a.on{color:var(--y);box-shadow:inset 0 -2px 0 var(--y)}
+
+/* przyciski ze ściętym rogiem */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border:0;cursor:pointer;background:var(--y);color:#050608;padding:15px 26px;font:700 17px var(--ui);letter-spacing:.1em;text-transform:uppercase;
+  clip-path:polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)));transition:filter .2s,transform .15s}
+.btn:hover{filter:brightness(1.1);transform:translateX(2px)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
+.btn.ghost{background:var(--panel-2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
+.btn.sm{padding:8px 14px;font-size:14px;--cut:8px}
+.btn.ok{background:rgba(56,240,160,.16);color:var(--ok)}
+.btn.bad{background:rgba(255,93,108,.14);color:var(--bad)}
+.btn.wide{width:100%}
+.btn svg{width:18px;height:18px}
+
+/* ---------- ekran startowy ---------- */
+.hero{min-height:calc(100vh - 30px);display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:30px;align-items:center;padding:36px 0 50px}
+body.in .hero{display:none}
+.hero .left{display:flex;flex-direction:column;gap:26px;max-width:560px}
+.eyebrow{display:flex;align-items:center;gap:14px;font:700 14px var(--ui);letter-spacing:.3em;text-transform:uppercase;color:var(--y)}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--y)}
+.hero h1{font:400 clamp(60px,9.4vw,124px)/.9 var(--display);text-transform:uppercase;letter-spacing:.005em}
+.hero h1 span{display:block}
+.hero h1 .o{color:transparent;-webkit-text-stroke:2px var(--y);text-shadow:0 0 28px rgba(243,255,20,.5)}
+.lead{color:#aab3b9;max-width:46ch;margin:0}
+.auth{position:relative;background:var(--panel);padding:22px;border:1px solid var(--line);
+  clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+.tabs{display:flex;gap:0;margin-bottom:6px;border-bottom:1px solid var(--line-2)}
+.tabs button{flex:1;background:none;border:0;padding:10px 6px 12px;cursor:pointer;font:700 16px var(--ui);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);box-shadow:inset 0 -2px 0 transparent;transition:color .2s,box-shadow .2s}
+.tabs button.on{color:var(--y);box-shadow:inset 0 -2px 0 var(--y)}
+label{display:block;font:600 13px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+input{width:100%;background:#05080a;border:1px solid var(--line-2);padding:13px 14px;transition:border-color .2s,box-shadow .2s;border-radius:0}
+input:focus{outline:none;border-color:var(--y);box-shadow:0 0 0 3px rgba(243,255,20,.14)}
+.err{min-height:1.4em;margin:12px 0 8px;color:var(--bad);font-weight:600;font-size:14px}
+.sec-note{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:13px}
+.sec-note i{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.tiny{position:absolute;left:0;bottom:16px;font:500 11px var(--mono);letter-spacing:.2em;color:#4b555b;text-transform:uppercase}
+
+/* orbita */
+.orbit{position:relative;justify-self:center;width:min(100%,640px);aspect-ratio:1;display:grid;place-items:center}
+.ring{position:absolute;border:1px solid var(--line);border-radius:50%}
+.ring.r1{inset:0}.ring.r2{inset:14%;border-color:rgba(243,255,20,.1)}
+.ring.r1{animation:spin 60s linear infinite}
+.ring.r2{animation:spin 90s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ring i{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--y);box-shadow:0 0 14px var(--y)}
+.r1 i{top:12%;left:21%}.r2 i{top:3%;left:50%;width:7px;height:7px}
+.dia{position:relative;width:44%;aspect-ratio:1;border:1px solid var(--y-dim);transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 50px rgba(243,255,20,.12),inset 0 0 40px rgba(243,255,20,.06);animation:pulse 4s ease-in-out infinite}
+.dia::after{content:"";position:absolute;inset:8%;border:1px solid rgba(243,255,20,.22)}
+@keyframes pulse{50%{box-shadow:0 0 80px rgba(243,255,20,.22),inset 0 0 50px rgba(243,255,20,.1)}}
+.live{position:absolute;text-align:center;z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px}
+.live strong{font:400 clamp(44px,7vw,84px)/1 var(--display);color:var(--y);text-shadow:0 0 26px rgba(243,255,20,.7)}
+.live small{font:500 11px var(--mono);letter-spacing:.32em;text-transform:uppercase;color:#a9b2b8}
+.chip-f{position:absolute;background:rgba(8,12,15,.9);border:1px solid var(--line-2);padding:12px 18px;display:flex;gap:26px;align-items:center;font:500 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#8d979d;animation:float 6s ease-in-out infinite}
+.chip-f b{color:var(--y);font-weight:600}
+.chip-f.a{top:17%;left:2%}.chip-f.b{bottom:12%;right:0;animation-delay:-3s}
+@keyframes float{50%{transform:translateY(-8px)}}
+
+/* ---------- widoki po zalogowaniu ---------- */
+#app{display:none}
+body.in #app{display:block}
+.view{animation:rise .45s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.ph{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.ph h2{font:400 clamp(38px,6vw,64px)/.95 var(--display);text-transform:uppercase}
+.ph h2 .o{color:transparent;-webkit-text-stroke:1.5px var(--y);text-shadow:0 0 22px rgba(243,255,20,.4)}
+.ph p{margin:0;color:var(--muted)}
+h3.sec{font:700 24px var(--ui);letter-spacing:.14em;text-transform:uppercase;margin:0 0 14px;color:var(--y)}
+.cutbox{background:var(--panel);border:1px solid var(--line);padding:22px;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,20px 100%,0 calc(100% - 20px))}
+.notice{display:flex;gap:14px;background:rgba(243,255,20,.06);border-left:3px solid var(--y);padding:12px 16px;margin-bottom:10px}
+.notice b{font:600 12px var(--mono);letter-spacing:.18em;color:var(--y);text-transform:uppercase;padding-top:3px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 16px;flex-wrap:wrap}
+.toolbar .cnt{font:600 14px var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.sel{background:var(--panel);border:1px solid var(--line-2);padding:10px 14px;font:600 15px var(--ui);letter-spacing:.1em;text-transform:uppercase;border-radius:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{position:relative;background:var(--panel);border:1px solid var(--line-2);padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%);animation:rise .5s cubic-bezier(.2,.7,.2,1) both;transition:transform .25s,border-color .25s,background .25s}
+.card:hover{transform:translateY(-4px);border-color:var(--y-dim);background:var(--panel-2)}
+.amt{font:400 54px/1 var(--display);font-variant-numeric:tabular-nums;color:var(--fg)}
+.amt small{font:600 14px var(--mono);color:var(--y);letter-spacing:.14em;margin-left:8px}
+.price{display:flex;align-items:baseline;gap:10px;font:600 13px var(--mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.price b{font:700 28px var(--ui);color:var(--y);letter-spacing:.04em}
+.note{color:var(--muted);font-size:14px;min-height:1.5em;overflow-wrap:anywhere}
+.empty{border:1px dashed var(--line);padding:46px 20px;text-align:center;color:var(--muted)}
+.empty h3{font:700 22px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--fg);margin-bottom:6px}
+
+.cols{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.stat{background:var(--panel);border:1px solid var(--line-2);padding:14px 16px;min-width:0}
+.stat small{display:block;font:600 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stat strong{display:block;font:400 32px/1.15 var(--display);margin-top:6px;font-variant-numeric:tabular-nums}
+.stat.hl{border-color:var(--y);background:rgba(243,255,20,.07)}
+.stat.hl strong{color:var(--y);text-shadow:0 0 18px rgba(243,255,20,.45)}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line-2);border-left:3px solid var(--line);padding:13px 16px;animation:rise .4s both}
+.row .main{min-width:0;flex:1 1 240px}
+.row .main b{font:700 20px var(--ui);letter-spacing:.06em}
+.row .sub{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.row .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-block;padding:2px 9px;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line-2);color:var(--muted);margin-left:6px;vertical-align:2px}
+.chip.live,.chip.sold,.chip.done{color:var(--ok);border-color:rgba(56,240,160,.4)}
+.chip.pending,.chip.reserved{color:var(--warn);border-color:rgba(255,201,74,.4)}
+.chip.rejected,.chip.cancelled{color:var(--bad);border-color:rgba(255,93,108,.4)}
+.code{font:600 16px var(--mono);letter-spacing:.1em;color:var(--y)}
+.calc{display:flex;justify-content:space-between;align-items:baseline;gap:12px;background:var(--panel-2);border:1px solid var(--line-2);padding:14px 16px;margin-top:16px;font:600 13px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.calc b{font:400 34px var(--display);color:var(--y);letter-spacing:0}
+.hint{color:var(--muted);font-size:13px;margin:10px 0 0}
+.atabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line-2)}
+.atabs::-webkit-scrollbar{display:none}
+.atabs button{background:none;border:0;padding:12px 18px;cursor:pointer;font:700 16px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;box-shadow:inset 0 -2px 0 transparent;transition:color .2s,box-shadow .2s}
+.atabs button.on{color:var(--y);box-shadow:inset 0 -2px 0 var(--y)}
+.skel{height:130px;background:linear-gradient(100deg,var(--panel) 30%,var(--panel-2) 50%,var(--panel) 70%);background-size:300% 100%;animation:sh 1.2s infinite linear}
+@keyframes sh{from{background-position:100% 0}to{background-position:-100% 0}}
+
+/* modal + toast */
+.veil{position:fixed;inset:0;z-index:50;background:rgba(2,4,5,.78);backdrop-filter:blur(6px);display:grid;place-items:center;padding:18px;animation:fade .2s both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{width:min(460px,100%);background:var(--panel);border:1px solid var(--y-dim);padding:26px;box-shadow:0 0 60px rgba(243,255,20,.12);animation:pop .35s cubic-bezier(.3,1.4,.5,1) both;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+.modal h3{font:400 34px/1 var(--display);text-transform:uppercase;margin-bottom:12px}
+.modal p{margin:8px 0;color:#aab3b9}
+.modal .btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}.modal .btns .btn{flex:1}
+.copybox{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#05080a;border:1px solid var(--line-2);padding:10px 12px;margin-top:10px;font:600 14px var(--mono);overflow-wrap:anywhere}
+#toasts{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:calc(100% - 32px)}
+.toast{background:var(--y);color:#050608;padding:10px 20px;font:700 15px var(--ui);letter-spacing:.1em;text-transform:uppercase;animation:pop .3s both}
+.modebar{display:none;margin-bottom:18px;font:500 12px var(--mono);letter-spacing:.06em;color:var(--warn);border:1px dashed rgba(255,201,74,.4);padding:8px 12px}
+body.local .modebar{display:block}
+footer{margin-top:54px;padding-top:18px;border-top:1px solid var(--line-2);color:#4b555b;font:500 11px var(--mono);letter-spacing:.2em;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+body:not(.in) footer{display:none}
+
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;min-height:0}
+  .orbit{order:-1;width:min(100%,380px)}
+  .hero .left{max-width:none}
+  .tiny{position:static;margin-top:6px}
+  .chip-f{padding:8px 12px;gap:14px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.drop{display:block;border:1px dashed var(--y-dim);padding:18px;text-align:center;cursor:pointer;color:var(--muted);transition:background .2s,border-color .2s;margin:0}
+.drop:hover,.drop.has{background:rgba(243,255,20,.05);border-color:var(--y)}
+.drop input{display:none}
+.thumb{display:block;max-width:100%;max-height:280px;margin:12px auto 0;border:1px solid var(--line-2)}
+.proofimg{display:block;width:100%;max-height:70vh;object-fit:contain;background:#000;border:1px solid var(--line-2);margin-top:10px}
+.steps{display:grid;gap:8px;margin:0 0 16px;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:12px;color:#aab3b9;font-size:15px}
+.steps li::before{content:counter(s);flex:0 0 26px;height:26px;display:grid;place-items:center;border:1px solid var(--y-dim);color:var(--y);font:600 13px var(--mono)}
+textarea{width:100%;background:#05080a;border:1px solid var(--line-2);padding:12px 14px;border-radius:0;resize:vertical;min-height:70px}
+textarea:focus{outline:none;border-color:var(--y)}
+.linkbtn{color:var(--y);text-decoration:underline;text-underline-offset:3px;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="#/"><i><b>F</b></i><span>Fake<em>LC</em>.lol</span></a>
+    <nav id="nav"></nav>
+  </header>
+
+  <section class="hero" id="hero">
+    <div class="left">
+      <a class="logo" href="#/"><i><b>F</b></i><span>Fake<em>LC</em>.lol</span></a>
+      <div class="eyebrow">Centrum LC</div>
+      <h1><span>Wejdź do</span><span class="o">Systemu</span></h1>
+      <p class="lead">Zaloguj się mailem i hasłem. Zleć LC na swój serwer Discord albo zarabiaj <b id="bp" style="color:var(--fg)">2 zł</b> za każde wystawione LC. Wypłaty na adres LTC.</p>
+      <div class="auth">
+        <div class="tabs"><button class="on" data-m="login">Logowanie</button><button data-m="reg">Rejestracja</button></div>
+        <form id="af" novalidate></form>
+      </div>
+      <div class="sec-note"><i></i>Zrzut ekranu i potwierdzenie właściciela przed każdą wypłatą</div>
+      <div class="tiny">Secure access</div>
+    </div>
+    <div class="orbit" aria-hidden="true">
+      <div class="ring r1"><i></i></div><div class="ring r2"><i></i></div>
+      <div class="dia"></div>
+      <div class="live"><strong>LIVE</strong><small>System online</small></div>
+      <div class="chip-f a"><span>Aktywne oferty</span><b id="liveCnt">0</b></div>
+      <div class="chip-f b"><span>Status</span><b>Online</b></div>
+    </div>
+  </section>
+
+  <main id="app"></main>
+  <footer><span>FakeLC.lol</span><span>Zamówienia realizujemy na Discord DM</span></footer>
+</div>
+<div id="toasts"></div>
+
+<script>
+/* FakeLC.lol - wspólny rdzeń logiki. Działa w Node (server.js) i w przeglądarce (index.html). */
+(function (root) {
+  'use strict';
+  function make(cfg) {
+    const BUY = cfg.BUY, PAY = cfg.PAY, MIN = cfg.MIN_PAYOUT, DISCORD = cfg.DISCORD;
+    const bad = (status, msg) => { const e = new Error(msg); e.status = status; return e; };
+    const cl = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+    const LTC = /^(ltc1[a-z0-9]{38,87}|[LM][a-km-zA-HJ-NP-Z1-9]{26,34}|3[a-km-zA-HJ-NP-Z1-9]{26,34})$/;
+    const INVITE = /^https:\/\/(www\.)?(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/[A-Za-z0-9_-]{2,40}\/?$/i;
+    const IMG = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+    const MAX_IMG = 1800000;
+    const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+    const pubUser = (u) => u && { id: u.id, email: u.email, discord: u.discord, role: u.role };
+
+    function validateRegister(b) {
+      const email = cl(b.email, 120).toLowerCase(), pass = String(b.password || ''), discord = cl(b.discord, 40);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw bad(400, 'Podaj poprawny e-mail.');
+      if (pass.length < 6 || pass.length > 100) throw bad(400, 'Hasło musi mieć co najmniej 6 znaków.');
+      if (discord.length < 2) throw bad(400, 'Podaj swój nick na Discordzie.');
+      return { email, pass, discord };
+    }
+
+    // ----- widoki ofert: każdy widzi tylko swoją stawkę -----
+    const pubOffer = (o) => ({ id: o.id, amount: o.amount, reward: o.amount * PAY, note: o.note, createdAt: o.createdAt });
+    const creatorOffer = (o) => ({ id: o.id, code: o.code, amount: o.amount, price: o.amount * BUY, link: o.link, note: o.note, status: o.status, createdAt: o.createdAt, msg: o.msg || '' });
+    const workerOffer = (o) => ({ id: o.id, amount: o.amount, reward: o.amount * PAY, link: o.link, note: o.note, status: o.status, takenAt: o.takenAt, msg: o.review || '', proofNick: o.proof ? o.proof.nick : '', proofAt: o.proof ? o.proof.at : 0 });
+
+    function handle(db, me, method, path, body, h) {
+      body = body || {};
+      const now = Date.now();
+      const U = (id) => db.users.find((u) => u.id === id);
+      const needU = () => { if (!me) throw bad(401, 'Zaloguj się.'); };
+      const needO = () => { needU(); if (me.role !== 'owner') throw bad(403, 'Brak dostępu.'); };
+      const earned = (uid) => db.offers.filter((o) => o.workerId === uid && o.status === 'done').reduce((s, o) => s + o.amount * PAY, 0);
+      const reserved = (uid) => db.withdrawals.filter((w) => w.userId === uid && w.status !== 'rejected').reduce((s, w) => s + w.amount, 0);
+      const wallet = (uid) => {
+        const e = earned(uid), r = reserved(uid);
+        const paid = db.withdrawals.filter((w) => w.userId === uid && w.status === 'paid').reduce((s, w) => s + w.amount, 0);
+        const pending = db.withdrawals.filter((w) => w.userId === uid && w.status === 'pending').reduce((s, w) => s + w.amount, 0);
+        return { earned: e, paid, pending, available: e - r };
+      };
+      const newCode = (prefix) => {
+        let c;
+        do { c = prefix + '-' + Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(h.random() * CODE_CHARS.length)]).join(''); } while (db.offers.some((o) => o.code === c));
+        return c;
+      };
+      let m;
+
+      if (path === '/api/config') return { buyPrice: BUY, payout: PAY, discord: DISCORD, minPayout: MIN };
+      if (path === '/api/announcements' && method === 'GET') return { announcements: db.announcements.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 5) };
+
+      // --- lista ofert (dla osób wystawiających LC na serwerach) ---
+      if (path === '/api/offers' && method === 'GET') {
+        return { offers: db.offers.filter((o) => o.status === 'live').sort((a, b) => b.createdAt - a.createdAt).map(pubOffer) };
+      }
+      // --- nowa oferta: link do serwera Discord + ilość LC ---
+      if (path === '/api/offers' && method === 'POST') {
+        needU();
+        const amount = Math.floor(Number(body.amount));
+        if (!(amount >= 1 && amount <= 100000)) throw bad(400, 'Podaj ilość LC (1 - 100000).');
+        let link = cl(body.link, 120);
+        if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link;
+        link = link.replace(/^http:\/\//i, 'https://');
+        if (!INVITE.test(link)) throw bad(400, 'Podaj link zaproszenia do serwera Discord, np. https://discord.gg/abc123');
+        const mine = db.offers.filter((o) => o.creatorId === me.id && o.status === 'pending').length;
+        if (me.role !== 'owner' && mine >= 10) throw bad(429, 'Masz już 10 ofert czekających na akceptację.');
+        const o = { id: h.rid(), code: newCode('OF'), creatorId: me.id, workerId: null, amount, link, note: cl(body.note, 140), status: me.role === 'owner' ? 'live' : 'pending', createdAt: now };
+        db.offers.push(o);
+        return { offer: creatorOffer(o), discord: DISCORD };
+      }
+      if (path === '/api/my/offers' && method === 'GET') {
+        needU();
+        return { offers: db.offers.filter((o) => o.creatorId === me.id).sort((a, b) => b.createdAt - a.createdAt).map(creatorOffer), discord: DISCORD };
+      }
+      if ((m = path.match(/^\/api\/my\/offers\/(\w+)$/)) && method === 'DELETE') {
+        needU();
+        const i = db.offers.findIndex((o) => o.id === m[1] && o.creatorId === me.id);
+        if (i < 0) throw bad(404, 'Nie znaleziono oferty.');
+        if (!['pending', 'live', 'rejected'].includes(db.offers[i].status)) throw bad(409, 'Tej oferty nie można już wycofać.');
+        db.offers.splice(i, 1);
+        return { ok: true };
+      }
+
+      // --- praca: wzięcie oferty, dowód ---
+      if ((m = path.match(/^\/api\/offers\/(\w+)\/take$/)) && method === 'POST') {
+        needU();
+        const o = db.offers.find((x) => x.id === m[1]);
+        if (!o || o.status !== 'live') throw bad(409, 'Ta oferta jest już niedostępna.');
+        if (o.creatorId === me.id) throw bad(400, 'Nie możesz wziąć własnej oferty.');
+        const active = db.offers.filter((x) => x.workerId === me.id && ['taken', 'review'].includes(x.status)).length;
+        if (me.role !== 'owner' && active >= 3) throw bad(429, 'Możesz mieć naraz 3 aktywne zlecenia.');
+        o.status = 'taken'; o.workerId = me.id; o.takenAt = now; o.review = '';
+        return { offer: workerOffer(o) };
+      }
+      if ((m = path.match(/^\/api\/offers\/(\w+)\/release$/)) && method === 'POST') {
+        needU();
+        const o = db.offers.find((x) => x.id === m[1] && x.workerId === me.id);
+        if (!o || o.status !== 'taken') throw bad(409, 'Tego zlecenia nie można oddać.');
+        o.status = 'live'; o.workerId = null; o.proof = null; o.review = '';
+        return { ok: true };
+      }
+      if ((m = path.match(/^\/api\/offers\/(\w+)\/proof$/)) && method === 'POST') {
+        needU();
+        const o = db.offers.find((x) => x.id === m[1] && x.workerId === me.id);
+        if (!o || o.status !== 'taken') throw bad(409, 'Do tego zlecenia nie można teraz dodać dowodu.');
+        const nick = cl(body.nick, 40), image = String(body.image || '');
+        if (nick.length < 2) throw bad(400, 'Podaj swój nick z Discorda widoczny na zrzucie.');
+        if (!IMG.test(image) || image.length > MAX_IMG) throw bad(400, 'Dodaj zrzut ekranu (JPG, PNG lub WebP, do ok. 1,3 MB).');
+        o.proof = { nick, image, at: now }; o.status = 'review'; o.review = '';
+        return { ok: true };
+      }
+      if (path === '/api/my/work' && method === 'GET') {
+        needU();
+        return { offers: db.offers.filter((o) => o.workerId === me.id).sort((a, b) => (b.takenAt || 0) - (a.takenAt || 0)).map(workerOffer), wallet: wallet(me.id) };
+      }
+
+      // --- portfel i wypłaty (tylko LTC, min 2 zł) ---
+      if (path === '/api/my/wallet' && method === 'GET') {
+        needU();
+        return { wallet: wallet(me.id), min: MIN, withdrawals: db.withdrawals.filter((w) => w.userId === me.id).sort((a, b) => b.createdAt - a.createdAt) };
+      }
+      if (path === '/api/withdrawals' && method === 'POST') {
+        needU();
+        const amount = Math.round(Number(body.amount) * 100) / 100;
+        const address = cl(body.address, 120).replace(/\s+/g, '');
+        if (!LTC.test(address)) throw bad(400, 'Podaj poprawny adres LTC (Litecoin).');
+        if (!(amount >= MIN)) throw bad(400, 'Minimalna wypłata to ' + MIN + ' zł.');
+        if (amount > wallet(me.id).available + 0.001) throw bad(400, 'Nie masz tyle środków na saldzie.');
+        const w = { id: h.rid(), userId: me.id, amount, address, status: 'pending', createdAt: now };
+        db.withdrawals.push(w);
+        return { withdrawal: w };
+      }
+
+      // --- panel właściciela ---
+      if (path === '/api/admin/overview' && method === 'GET') {
+        needO();
+        const who = (id) => { const u = U(id); return u ? { email: u.email, discord: u.discord } : { email: '?', discord: '' }; };
+        const done = db.offers.filter((o) => o.status === 'done');
+        let revenue = 0, credited = 0;
+        done.forEach((o) => {
+          const c = U(o.creatorId), w = U(o.workerId);
+          if (c && c.role !== 'owner') revenue += o.amount * BUY;
+          if (w && w.role !== 'owner') credited += o.amount * PAY;
+        });
+        const paidOut = db.withdrawals.filter((w) => w.status === 'paid').reduce((s, w) => s + w.amount, 0);
+        const pendingW = db.withdrawals.filter((w) => w.status === 'pending');
+        const row = (o) => Object.assign({}, creatorOffer(o), { creator: who(o.creatorId), worker: o.workerId ? who(o.workerId) : null, reward: o.amount * PAY, proofNick: o.proof ? o.proof.nick : '', proofAt: o.proof ? o.proof.at : 0 });
+        return {
+          stats: { revenue, credited, profit: revenue - credited, paidOut, toPay: pendingW.reduce((s, w) => s + w.amount, 0), users: db.users.length, pending: db.offers.filter((o) => o.status === 'pending').length, review: db.offers.filter((o) => o.status === 'review').length, withdrawals: pendingW.length, liveLc: db.offers.filter((o) => o.status === 'live').reduce((s, o) => s + o.amount, 0) },
+          pending: db.offers.filter((o) => o.status === 'pending').sort((a, b) => a.createdAt - b.createdAt).map(row),
+          review: db.offers.filter((o) => o.status === 'review').sort((a, b) => a.proof.at - b.proof.at).map(row),
+          live: db.offers.filter((o) => ['live', 'taken'].includes(o.status)).sort((a, b) => b.createdAt - a.createdAt).map(row),
+          withdrawals: db.withdrawals.slice().sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.createdAt - a.createdAt).slice(0, 200).map((w) => Object.assign({}, w, { user: who(w.userId) })),
+        };
+      }
+      if ((m = path.match(/^\/api\/admin\/proof\/(\w+)$/)) && method === 'GET') {
+        needO();
+        const o = db.offers.find((x) => x.id === m[1]);
+        if (!o || !o.proof) throw bad(404, 'Brak dowodu.');
+        return { image: o.proof.image, nick: o.proof.nick, at: o.proof.at, link: o.link, amount: o.amount };
+      }
+      if ((m = path.match(/^\/api\/admin\/offers\/(\w+)\/(approve|reject|remove)$/)) && method === 'POST') {
+        needO();
+        const o = db.offers.find((x) => x.id === m[1]);
+        if (!o) throw bad(404, 'Nie znaleziono oferty.');
+        if (m[2] === 'remove') { if (!['live', 'taken'].includes(o.status)) throw bad(409, 'Można zdjąć tylko aktywną ofertę.'); o.status = 'rejected'; o.workerId = null; o.msg = 'Zdjęta przez właściciela'; }
+        else {
+          if (o.status !== 'pending') throw bad(409, 'Oferta nie czeka na akceptację.');
+          o.status = m[2] === 'approve' ? 'live' : 'rejected';
+          o.msg = m[2] === 'reject' ? (cl(body.msg, 140) || 'Odrzucona') : '';
+        }
+        return { ok: true };
+      }
+      if ((m = path.match(/^\/api\/admin\/offers\/(\w+)\/proof\/(accept|reject)$/)) && method === 'POST') {
+        needO();
+        const o = db.offers.find((x) => x.id === m[1]);
+        if (!o || o.status !== 'review') throw bad(409, 'Ten dowód nie czeka na sprawdzenie.');
+        if (m[2] === 'accept') { o.status = 'done'; o.doneAt = now; o.review = ''; }
+        else { o.status = 'taken'; o.review = cl(body.msg, 140) || 'Dowód odrzucony, dodaj nowy zrzut.'; o.proof = null; }
+        return { ok: true };
+      }
+      if ((m = path.match(/^\/api\/admin\/withdrawals\/(\w+)\/(paid|reject)$/)) && method === 'POST') {
+        needO();
+        const w = db.withdrawals.find((x) => x.id === m[1]);
+        if (!w) throw bad(404, 'Nie znaleziono wypłaty.');
+        if (w.status !== 'pending') throw bad(409, 'Ta wypłata jest już zamknięta.');
+        w.status = m[2] === 'paid' ? 'paid' : 'rejected'; w.doneAt = now;
+        return { ok: true };
+      }
+      if (path === '/api/admin/announcements' && method === 'POST') {
+        needO();
+        const text = cl(body.text, 280);
+        if (text.length < 3) throw bad(400, 'Wpisz treść ogłoszenia.');
+        db.announcements.push({ id: h.rid(), text, createdAt: now });
+        return { ok: true };
+      }
+      if ((m = path.match(/^\/api\/admin\/announcements\/(\w+)$/)) && method === 'DELETE') {
+        needO();
+        db.announcements = db.announcements.filter((a) => a.id !== m[1]);
+        return { ok: true };
+      }
+      throw bad(404, 'Nie znaleziono.');
+    }
+
+    return { handle, validateRegister, pubUser, bad, cl };
+  }
+  root.FakeCore = { make };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { make };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const zl = (n) => Number(n).toLocaleString('pl-PL', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }) + ' zł';
+const lc = (n) => Number(n).toLocaleString('pl-PL');
+const when = (t) => (t ? new Date(t).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+const STATUS = { pending: 'Czeka na akceptację', live: 'Aktywna', taken: 'W realizacji', review: 'Do sprawdzenia', done: 'Zrealizowana', rejected: 'Odrzucona', paid: 'Wypłacona' };
+const WSTATUS = { pending: 'Oczekuje', paid: 'Wypłacona', rejected: 'Odrzucona' };
+const S = { me: null, cfg: { buyPrice: 3, payout: 2, discord: 'wydzialsledczy', minPayout: 2 }, adminTab: 'review', remote: false };
+
+/* =====================================================================
+   Warstwa danych. Gdy obok działa serwer (node server.js), strona łączy się z nim.
+   Gdy otwierasz sam index.html, dane są w localStorage tej przeglądarki.
+   ===================================================================== */
+const OWNER = { email: 'ogprzecin3k@gmail.com', hash: 'e1e267e54d2b01bd1a30ba633e3e5de136e3ffd4550880f69d7d50f670c009a0' };
+const LS = 'fakelc_db_v2', LSS = 'fakelc_sess_v2';
+const CORE = FakeCore.make({ BUY: 3, PAY: 2, MIN_PAYOUT: 2, DISCORD: 'wydzialsledczy' });
+const HELP = {
+  rid: () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''),
+  random: () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296,
+};
+let memDb = null, memSess = null;
+const bad = (status, msg) => { const e = new Error(msg); e.status = status; return e; };
+async function sha(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('fakelc.lol|' + s));
+  return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
+}
+function ldb() {
+  let d = memDb;
+  if (!d) { try { d = JSON.parse(localStorage.getItem(LS)); } catch (e) { d = null; } }
+  if (!d || !d.users) d = { users: [{ id: 'owner', email: OWNER.email, discord: 'wydzialsledczy', role: 'owner', pass: OWNER.hash, createdAt: Date.now() }], offers: [], withdrawals: [], announcements: [] };
+  memDb = d; return d;
+}
+function lsave() { try { localStorage.setItem(LS, JSON.stringify(memDb)); } catch (e) { throw bad(507, 'Brak miejsca w pamięci przeglądarki. Uruchom serwer (node server.js), żeby trzymać zrzuty ekranu.'); } }
+function lsess() { try { return localStorage.getItem(LSS) || memSess; } catch (e) { return memSess; } }
+function lsetsess(v) { memSess = v; try { v ? localStorage.setItem(LSS, v) : localStorage.removeItem(LSS); } catch (e) {} }
+
+async function localApi(path, method, data) {
+  const db = ldb(); data = data || {};
+  const me = db.users.find((u) => u.id === lsess()) || null;
+  if (path === '/api/me') return { user: CORE.pubUser(me) };
+  if (path === '/api/register' && method === 'POST') {
+    const v = CORE.validateRegister(data);
+    if (db.users.some((u) => u.email === v.email)) throw bad(409, 'Ten e-mail jest już zarejestrowany.');
+    const u = { id: HELP.rid(), email: v.email, discord: v.discord, role: 'user', pass: await sha(v.pass), createdAt: Date.now() };
+    db.users.push(u); lsave(); lsetsess(u.id); return { user: CORE.pubUser(u) };
+  }
+  if (path === '/api/login' && method === 'POST') {
+    const u = db.users.find((x) => x.email === CORE.cl(data.email, 120).toLowerCase());
+    if (!u || u.pass !== await sha(String(data.password || ''))) throw bad(401, 'Zły e-mail lub hasło.');
+    lsetsess(u.id); return { user: CORE.pubUser(u) };
+  }
+  if (path === '/api/logout') { lsetsess(null); return { ok: true }; }
+  const out = CORE.handle(db, me, method, path, data, HELP);
+  if (method !== 'GET') lsave();
+  return out;
+}
+async function api(path, method, data) {
+  method = method || 'GET';
+  if (!S.remote) return localApi(path, method, data);
+  const opt = { method, headers: {}, credentials: 'same-origin' };
+  if (method !== 'GET') { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(data === undefined ? {} : data); }
+  const r = await fetch(path, opt);
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (!r.ok) throw bad(r.status, j.error || 'Coś poszło nie tak.');
+  return j;
+}
+
+/* ---------- UI pomocnicze ---------- */
+function toast(msg) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2800);
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast('Skopiowano'); }
+  catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); toast('Skopiowano'); } catch (_) { toast('Zaznacz i skopiuj ręcznie'); } t.remove(); }
+}
+function modal(html, wide) {
+  const v = document.createElement('div'); v.className = 'veil';
+  v.innerHTML = '<div class="modal" role="dialog" aria-modal="true"' + (wide ? ' style="width:min(900px,100%);max-height:92vh;overflow:auto"' : '') + '>' + html + '</div>';
+  const close = () => { v.style.transition = 'opacity .18s'; v.style.opacity = '0'; setTimeout(() => v.remove(), 180); };
+  v.addEventListener('click', (e) => { if (e.target === v) close(); });
+  document.body.appendChild(v); v.close = close; return v;
+}
+function askText(title, placeholder, cb) {
+  const m = modal('<h3>' + esc(title) + '</h3><textarea id="pm" maxlength="140" placeholder="' + esc(placeholder) + '"></textarea><div class="btns"><button class="btn ghost" id="x">Anuluj</button><button class="btn" id="ok">Potwierdź</button></div>');
+  $('#x', m).onclick = () => m.close();
+  $('#ok', m).onclick = () => { const v = $('#pm', m).value; m.close(); cb(v); };
+  $('#pm', m).focus();
+}
+function compressImage(file) {
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error('To nie jest obraz.'));
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1920 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        let q = 0.72, d = c.toDataURL('image/jpeg', q);
+        while (d.length > 1500000 && q > 0.3) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+        res(d);
+      };
+      img.onerror = () => rej(new Error('Nie można odczytać obrazu.'));
+      img.src = fr.result;
+    };
+    fr.onerror = () => rej(new Error('Nie można odczytać pliku.'));
+    fr.readAsDataURL(file);
+  });
+}
+const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const chip = (s, map) => '<span class="chip ' + s + '">' + (map || STATUS)[s] + '</span>';
+
+/* ---------- ekran startowy / logowanie ---------- */
+let authMode = 'login';
+function drawAuth() {
+  $('#af').innerHTML = '<label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>' +
+    (authMode === 'reg' ? '<label for="dc">Nick na Discordzie</label><input id="dc" autocomplete="off" placeholder="np. nick">' : '') +
+    '<label for="pw">Hasło</label><input id="pw" type="password" autocomplete="' + (authMode === 'reg' ? 'new-password' : 'current-password') + '" required>' +
+    '<div class="err" id="err"></div><button class="btn wide" id="go"><span>' + (authMode === 'reg' ? 'Załóż konto' : 'Zaloguj się') + '</span>' + arrow + '</button>';
+}
+document.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => {
+  authMode = b.dataset.m; document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b)); drawAuth();
+});
+$('#af').onsubmit = async (e) => {
+  e.preventDefault(); const btn = $('#go'); btn.disabled = true; $('#err').textContent = '';
+  try {
+    const body = { email: $('#email').value, password: $('#pw').value };
+    if (authMode === 'reg') body.discord = $('#dc').value;
+    const r = await api(authMode === 'reg' ? '/api/register' : '/api/login', 'POST', body);
+    S.me = r.user; toast(authMode === 'reg' ? 'Konto utworzone' : 'Witaj w systemie');
+    location.hash = S.me.role === 'owner' ? '#/admin' : '#/'; route_();
+  } catch (err) { $('#err').textContent = err.message; btn.disabled = false; }
+};
+async function loadHeroStats() { try { $('#liveCnt').textContent = (await api('/api/offers')).offers.length; } catch (e) {} }
+
+/* ---------- nawigacja ---------- */
+function renderNav() {
+  const route = location.hash || '#/';
+  const a = (h, t) => '<a href="' + h + '" class="' + (route === h ? 'on' : '') + '">' + t + '</a>';
+  let h = a('#/', 'Oferty') + a('#/sell', 'Wystaw') + a('#/work', 'Moja praca') + a('#/wallet', 'Portfel');
+  if (S.me && S.me.role === 'owner') h += a('#/admin', 'Panel');
+  h += '<button id="out">Wyloguj</button>';
+  $('#nav').innerHTML = h;
+  $('#out').onclick = async () => { await api('/api/logout', 'POST'); S.me = null; toast('Wylogowano'); location.hash = '#/'; route_(); };
+}
+function view(html) {
+  const note = S.remote ? '' : '<div class="modebar">Tryb lokalny: dane są zapisane tylko w tej przeglądarce. Żeby ludzie widzieli te same oferty, uruchom serwer (node server.js).</div>';
+  $('#app').innerHTML = '<div class="view">' + note + html + '</div>'; window.scrollTo({ top: 0 });
+}
+const skel = '<div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
+
+/* ---------- oferty do wzięcia ---------- */
+async function viewHome() {
+  view('<div class="ph"><h2>Aktualne <span class="o">oferty</span></h2><p>Wystaw LC na wskazanym serwerze Discord i zarób ' + zl(S.cfg.payout) + ' za każde LC.</p></div><div id="notices"></div><div id="market">' + skel + '</div>');
+  try {
+    const [L, A] = await Promise.all([api('/api/offers'), api('/api/announcements')]);
+    $('#notices').innerHTML = A.announcements.map((a) => '<div class="notice"><b>Info</b><span>' + esc(a.text) + '</span></div>').join('');
+    const total = L.offers.reduce((s, o) => s + o.amount, 0);
+    $('#market').innerHTML = '<div class="toolbar"><span class="cnt">' + lc(total) + ' LC w ' + L.offers.length + ' ofertach</span></div>' + (L.offers.length ? '<div class="grid">' + L.offers.map((o, i) =>
+      '<div class="card" style="animation-delay:' + Math.min(i, 12) * 45 + 'ms"><div class="amt">' + lc(o.amount) + '<small>LC</small></div><div class="price"><b>' + zl(o.reward) + '</b><span>dla Ciebie</span></div><div class="note">' + (o.note ? esc(o.note) : '&nbsp;') + '</div>' +
+      '<button class="btn take" data-id="' + o.id + '"><span>Biorę zlecenie</span>' + arrow + '</button></div>').join('') + '</div>'
+      : '<div class="empty"><h3>Teraz pusto</h3>Nowe oferty pojawiają się tu po akceptacji przez właściciela.</div>');
+    document.querySelectorAll('.take').forEach((b) => b.onclick = async () => {
+      b.disabled = true;
+      try { await api('/api/offers/' + b.dataset.id + '/take', 'POST'); toast('Zlecenie Twoje. Dodaj dowód w zakładce Moja praca.'); location.hash = '#/work'; }
+      catch (e) { toast(e.message); b.disabled = false; if (e.status === 409) viewHome(); }
+    });
+  } catch (e) { $('#market').innerHTML = '<div class="empty"><h3>Błąd</h3>' + esc(e.message) + '</div>'; }
+}
+
+/* ---------- wystawianie oferty (zlecający) ---------- */
+function showPay(o, discord) {
+  const m = modal('<h3>Zapłać na Discordzie</h3><ol class="steps"><li>Napisz na DM do <b style="color:#fff">' + esc(discord) + '</b></li><li>Zapłać <b style="color:var(--y)">' + zl(o.price) + '</b> i podaj kod oferty</li><li>Po sprawdzeniu płatności właściciel akceptuje ofertę i pojawia się na liście</li></ol>' +
+    '<div class="copybox"><span>Discord: ' + esc(discord) + '</span><button class="btn sm ghost" data-c="' + esc(discord) + '">Kopiuj</button></div>' +
+    '<div class="copybox"><span>Kod oferty: ' + esc(o.code) + '</span><button class="btn sm ghost" data-c="' + esc(o.code) + '">Kopiuj</button></div>' +
+    '<div class="btns"><button class="btn" id="ok">Rozumiem</button></div>');
+  m.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => copy(b.dataset.c));
+  $('#ok', m).onclick = () => m.close();
+}
+async function viewSell() {
+  const owner = S.me.role === 'owner';
+  view('<div class="ph"><h2>Wystaw <span class="o">ofertę</span></h2><p>Podaj ilość LC i link do swojego serwera Discord. Płacisz ' + zl(S.cfg.buyPrice) + ' za 1 LC na Discordzie.</p></div>' +
+    '<div class="cols"><div class="cutbox"><form id="f" novalidate><label for="am">Ile LC</label><input id="am" type="number" min="1" step="1" inputmode="numeric" placeholder="np. 50">' +
+    '<label for="lk">Link do serwera Discord</label><input id="lk" placeholder="https://discord.gg/twojserwer" autocomplete="off">' +
+    '<label for="nt">Opis (opcjonalnie)</label><input id="nt" maxlength="140" placeholder="np. kanał #ogloszenia">' +
+    (owner ? '<div class="calc"><span>Status</span><b>od razu aktywna</b></div>' : '<div class="calc"><span>Do zapłaty</span><b id="get">0 zł</b></div><p class="hint">Oferta pojawi się na liście po zaakceptowaniu przez właściciela, który potwierdza Twoją płatność.</p>') +
+    '<div class="err" id="err"></div><button class="btn wide" id="go"><span>Wystaw</span>' + arrow + '</button></form></div>' +
+    '<div><h3 class="sec">Twoje oferty</h3><div class="list" id="mine"><div class="skel"></div></div></div></div>');
+  const am = $('#am');
+  am.oninput = () => { const g = $('#get'); if (g) g.textContent = zl((parseInt(am.value, 10) || 0) * S.cfg.buyPrice); };
+  $('#f').onsubmit = async (e) => {
+    e.preventDefault(); $('#err').textContent = ''; const btn = $('#go'); btn.disabled = true;
+    try {
+      const r = await api('/api/offers', 'POST', { amount: parseInt(am.value, 10), link: $('#lk').value, note: $('#nt').value });
+      am.value = ''; $('#lk').value = ''; $('#nt').value = ''; am.oninput(); loadMine();
+      if (owner) toast('Oferta jest aktywna'); else showPay(r.offer, r.discord);
+    } catch (err) { $('#err').textContent = err.message; }
+    btn.disabled = false;
+  };
+  async function loadMine() {
+    try {
+      const r = await api('/api/my/offers');
+      $('#mine').innerHTML = r.offers.length ? r.offers.map((o) =>
+        '<div class="row"><div class="main"><b>' + lc(o.amount) + ' LC</b>' + chip(o.status) + '<div class="sub"><span class="code">' + esc(o.code) + '</span> · ' + (owner ? '' : zl(o.price) + ' · ') + when(o.createdAt) + (o.msg ? ' · ' + esc(o.msg) : '') + '<br>' + esc(o.link) + '</div></div>' +
+        '<div class="acts">' + (o.status === 'pending' && !owner ? '<button class="btn sm" data-pay="' + o.id + '">Jak zapłacić</button>' : '') + (['pending', 'live', 'rejected'].includes(o.status) ? '<button class="btn sm bad" data-del="' + o.id + '">Wycofaj</button>' : '') + '</div></div>').join('')
+        : '<div class="empty"><h3>Pusto</h3>Wypełnij formularz obok.</div>';
+      document.querySelectorAll('[data-pay]').forEach((b) => b.onclick = () => showPay(r.offers.find((x) => x.id === b.dataset.pay), r.discord));
+      document.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => { try { await api('/api/my/offers/' + b.dataset.del, 'DELETE', {}); toast('Wycofano'); loadMine(); } catch (e) { toast(e.message); } });
+    } catch (e) { $('#mine').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+  }
+  loadMine();
+}
+
+/* ---------- moja praca (wystawiający LC, dowody) ---------- */
+async function viewWork() {
+  view('<div class="ph"><h2>Moja <span class="o">praca</span></h2><p>Wystaw LC na serwerze, zrób pełny zrzut ekranu z komputera i wyślij go z nickiem Discorda.</p></div><div class="list" id="wl"><div class="skel"></div></div>');
+  const imgs = {};
+  try {
+    const r = await api('/api/my/work');
+    $('#wl').innerHTML = r.offers.length ? r.offers.map((o) => {
+      let inner = '';
+      if (o.status === 'taken') inner =
+        '<ol class="steps" style="margin-top:14px"><li>Wejdź na serwer: <a class="linkbtn" href="' + esc(o.link) + '" target="_blank" rel="noopener noreferrer">' + esc(o.link) + '</a></li><li>Wystaw tam ' + lc(o.amount) + ' LC</li><li>Zrób pełny zrzut ekranu z komputera, na którym widać LC i Twój nick z Discorda</li></ol>' +
+        (o.msg ? '<div class="err" style="margin-top:0">Poprzedni dowód odrzucony: ' + esc(o.msg) + '</div>' : '') +
+        '<label for="nk-' + o.id + '" style="margin-top:4px">Twój nick z Discorda</label><input id="nk-' + o.id + '" maxlength="40" value="' + esc(S.me.discord || '') + '">' +
+        '<label style="margin-top:12px">Zrzut ekranu (cały ekran)</label><label class="drop" id="dr-' + o.id + '"><input type="file" accept="image/*" data-f="' + o.id + '"><span>Kliknij i wybierz plik</span><img class="thumb" id="th-' + o.id + '" alt="" hidden></label>' +
+        '<div class="err" id="er-' + o.id + '"></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-send="' + o.id + '"><span>Wyślij dowód</span>' + arrow + '</button><button class="btn ghost" data-rel="' + o.id + '">Oddaj zlecenie</button></div>';
+      if (o.status === 'review') inner = '<p class="hint" style="margin-top:12px">Dowód wysłany (' + esc(o.proofNick) + ', ' + when(o.proofAt) + '). Czeka na potwierdzenie przez właściciela.</p>';
+      if (o.status === 'done') inner = '<p class="hint" style="margin-top:12px;color:var(--ok)">Potwierdzone. ' + zl(o.reward) + ' dodane do Twojego salda.</p>';
+      return '<div class="cutbox"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><span><b style="font:400 34px var(--display)">' + lc(o.amount) + '</b> <span class="code">LC</span>' + chip(o.status) + '</span><span class="price"><b>' + zl(o.reward) + '</b><span>nagroda</span></span></div>' + inner + '</div>';
+    }).join('') : '<div class="empty"><h3>Brak zleceń</h3>Wybierz ofertę w zakładce Oferty.</div>';
+    document.querySelectorAll('[data-f]').forEach((inp) => inp.onchange = async () => {
+      const id = inp.dataset.f, er = $('#er-' + id); er.textContent = '';
+      try { imgs[id] = await compressImage(inp.files[0]); const t = $('#th-' + id); t.src = imgs[id]; t.hidden = false; $('#dr-' + id).classList.add('has'); $('#dr-' + id + ' span').textContent = 'Zmień plik'; }
+      catch (e) { er.textContent = e.message; }
+    });
+    document.querySelectorAll('[data-send]').forEach((b) => b.onclick = async () => {
+      const id = b.dataset.send, er = $('#er-' + id); er.textContent = '';
+      if (!imgs[id]) { er.textContent = 'Dodaj zrzut ekranu.'; return; }
+      b.disabled = true;
+      try { await api('/api/offers/' + id + '/proof', 'POST', { nick: $('#nk-' + id).value, image: imgs[id] }); toast('Dowód wysłany'); viewWork(); }
+      catch (e) { er.textContent = e.message; b.disabled = false; }
+    });
+    document.querySelectorAll('[data-rel]').forEach((b) => b.onclick = async () => { try { await api('/api/offers/' + b.dataset.rel + '/release', 'POST'); toast('Oddano zlecenie'); viewWork(); } catch (e) { toast(e.message); } });
+  } catch (e) { $('#wl').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+/* ---------- portfel i wypłaty LTC ---------- */
+async function viewWallet() {
+  view('<div class="ph"><h2>Twój <span class="o">portfel</span></h2><p>Wypłaty tylko na adres LTC, od ' + zl(S.cfg.minPayout) + '.</p></div><div id="wb"><div class="skel"></div></div>');
+  try {
+    const r = await api('/api/my/wallet'), w = r.wallet;
+    $('#wb').innerHTML =
+      '<div class="stats"><div class="stat hl"><small>Dostępne</small><strong>' + zl(w.available) + '</strong></div><div class="stat"><small>Zarobione</small><strong>' + zl(w.earned) + '</strong></div><div class="stat"><small>W trakcie wypłaty</small><strong>' + zl(w.pending) + '</strong></div><div class="stat"><small>Wypłacone</small><strong>' + zl(w.paid) + '</strong></div></div>' +
+      '<div class="cols"><div class="cutbox"><h3 class="sec">Wypłata na LTC</h3><form id="wf" novalidate><label for="ad">Adres LTC</label><input id="ad" autocomplete="off" placeholder="ltc1... lub L..." spellcheck="false">' +
+      '<label for="wa">Kwota (zł)</label><input id="wa" type="number" min="' + r.min + '" step="0.01" inputmode="decimal" value="' + (w.available >= r.min ? w.available : '') + '">' +
+      '<p class="hint">Minimum ' + zl(r.min) + '. Właściciel wysyła środki na podany adres i akceptuje wypłatę. Sprawdź adres dwa razy, przelewu LTC nie da się cofnąć.</p>' +
+      '<div class="err" id="werr"></div><button class="btn wide" id="wg"><span>Poproś o wypłatę</span>' + arrow + '</button></form></div>' +
+      '<div><h3 class="sec">Historia wypłat</h3><div class="list">' + (r.withdrawals.length ? r.withdrawals.map((x) =>
+        '<div class="row"><div class="main"><b>' + zl(x.amount) + '</b>' + chip(x.status, WSTATUS) + '<div class="sub">' + when(x.createdAt) + ' · ' + esc(x.address) + '</div></div></div>').join('') : '<div class="empty"><h3>Brak wypłat</h3></div>') + '</div></div></div>';
+    $('#wf').onsubmit = async (e) => {
+      e.preventDefault(); $('#werr').textContent = ''; const b = $('#wg'); b.disabled = true;
+      try { await api('/api/withdrawals', 'POST', { address: $('#ad').value, amount: Number($('#wa').value) }); toast('Wniosek wysłany'); viewWallet(); }
+      catch (err) { $('#werr').textContent = err.message; b.disabled = false; }
+    };
+  } catch (e) { $('#wb').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+/* ---------- panel właściciela ---------- */
+async function viewAdmin() {
+  view('<div class="ph"><h2>Panel <span class="o">właściciela</span></h2></div><div id="adm"><div class="skel"></div></div>');
+  await drawAdmin();
+}
+async function showProof(id) {
+  try {
+    const p = await api('/api/admin/proof/' + id);
+    const m = modal('<h3>Dowód wystawienia</h3><p>Nick: <b style="color:var(--y)">' + esc(p.nick) + '</b> · ' + lc(p.amount) + ' LC · ' + when(p.at) + '</p><p>Serwer: <a class="linkbtn" href="' + esc(p.link) + '" target="_blank" rel="noopener noreferrer">' + esc(p.link) + '</a></p><img class="proofimg" alt="Zrzut ekranu" src="' + p.image + '"><div class="btns"><button class="btn" id="ok">Zamknij</button></div>', true);
+    $('#ok', m).onclick = () => m.close();
+  } catch (e) { toast(e.message); }
+}
+async function drawAdmin() {
+  let D, A;
+  try { [D, A] = await Promise.all([api('/api/admin/overview'), api('/api/announcements')]); }
+  catch (e) { $('#adm').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; return; }
+  const st = D.stats, n = (x) => (x ? ' (' + x + ')' : '');
+  const tabs = [['pending', 'Płatności' + n(st.pending)], ['review', 'Dowody' + n(st.review)], ['wd', 'Wypłaty LTC' + n(st.withdrawals)], ['live', 'Oferty'], ['news', 'Ogłoszenia']];
+  const who = (u) => esc(u.email) + ' (Discord: ' + esc(u.discord) + ')';
+  let body = '';
+  if (S.adminTab === 'pending') body = D.pending.length ? '<div class="list">' + D.pending.map((o) =>
+    '<div class="row"><div class="main"><b>' + lc(o.amount) + ' LC</b>' + chip('pending') + '<div class="sub"><span class="code">' + esc(o.code) + '</span> · do zapłaty <b>' + zl(o.price) + '</b> · ' + who(o.creator) + '<br>' + esc(o.link) + (o.note ? ' · ' + esc(o.note) : '') + '</div></div>' +
+    '<div class="acts"><button class="btn sm ok" data-a="approve" data-id="' + o.id + '">Płatność jest, akceptuj</button><button class="btn sm bad" data-ar="' + o.id + '">Odrzuć</button></div></div>').join('') + '</div>'
+    : '<div class="empty"><h3>Nic nie czeka</h3>Nowe oferty z płatnością do sprawdzenia pojawią się tutaj.</div>';
+  if (S.adminTab === 'review') body = D.review.length ? '<div class="list">' + D.review.map((o) =>
+    '<div class="row"><div class="main"><b>' + lc(o.amount) + ' LC</b>' + chip('review') + '<div class="sub">Wystawił: ' + who(o.worker) + ' · nick na zrzucie: <b>' + esc(o.proofNick) + '</b> · ' + when(o.proofAt) + '<br>Serwer: ' + esc(o.link) + ' · nagroda ' + zl(o.reward) + '</div></div>' +
+    '<div class="acts"><button class="btn sm ghost" data-pv="' + o.id + '">Zobacz zrzut</button><button class="btn sm ok" data-pa="' + o.id + '">Potwierdzam</button><button class="btn sm bad" data-pr="' + o.id + '">Odrzuć</button></div></div>').join('') + '</div>'
+    : '<div class="empty"><h3>Brak dowodów</h3>Zrzuty do sprawdzenia pojawią się tutaj.</div>';
+  if (S.adminTab === 'wd') body = D.withdrawals.length ? '<div class="list">' + D.withdrawals.map((w) =>
+    '<div class="row"><div class="main"><b>' + zl(w.amount) + '</b>' + chip(w.status, WSTATUS) + '<div class="sub">' + who(w.user) + ' · ' + when(w.createdAt) + '<br><span class="code" style="font-size:13px;word-break:break-all">' + esc(w.address) + '</span></div></div>' +
+    '<div class="acts"><button class="btn sm ghost" data-cp="' + esc(w.address) + '">Kopiuj adres</button>' + (w.status === 'pending' ? '<button class="btn sm ok" data-w="paid" data-id="' + w.id + '">Wysłano, zaakceptuj</button><button class="btn sm bad" data-w="reject" data-id="' + w.id + '">Odrzuć</button>' : '') + '</div></div>').join('') + '</div>'
+    : '<div class="empty"><h3>Brak wypłat</h3></div>';
+  if (S.adminTab === 'live') body = '<div class="cutbox" style="margin-bottom:18px"><h3 class="sec">Dodaj ofertę jako właściciel</h3><form id="nf" novalidate style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end"><div><label for="na" style="margin-top:0">Ilość LC</label><input id="na" type="number" min="1" step="1" inputmode="numeric"></div><div><label for="nl" style="margin-top:0">Link do serwera</label><input id="nl" placeholder="https://discord.gg/..."></div><div><label for="nn" style="margin-top:0">Opis</label><input id="nn" maxlength="140"></div><button class="btn" id="ng">Dodaj</button></form><div class="err" id="nerr"></div></div>' +
+    (D.live.length ? '<div class="list">' + D.live.map((o) => '<div class="row"><div class="main"><b>' + lc(o.amount) + ' LC</b>' + chip(o.status) + '<div class="sub">' + who(o.creator) + (o.worker ? ' · bierze: ' + who(o.worker) : '') + '<br>' + esc(o.link) + '</div></div><div class="acts"><button class="btn sm bad" data-a="remove" data-id="' + o.id + '">Zdejmij</button></div></div>').join('') + '</div>' : '<div class="empty"><h3>Brak aktywnych ofert</h3></div>');
+  if (S.adminTab === 'news') body = '<div class="cutbox" style="margin-bottom:18px"><h3 class="sec">Nowe ogłoszenie</h3><form id="af2" novalidate><input id="at" maxlength="280" placeholder="np. Wypłaty LTC realizujemy do 22:00"><div class="err" id="aerr"></div><button class="btn" id="ag">Opublikuj</button></form></div>' +
+    (A.announcements.length ? '<div class="list">' + A.announcements.map((a) => '<div class="row"><div class="main">' + esc(a.text) + '<div class="sub">' + when(a.createdAt) + '</div></div><div class="acts"><button class="btn sm bad" data-n="' + a.id + '">Usuń</button></div></div>').join('') + '</div>' : '<div class="empty"><h3>Brak ogłoszeń</h3></div>');
+  $('#adm').innerHTML =
+    '<div class="stats"><div class="stat hl"><small>Twój zysk</small><strong>' + zl(st.profit) + '</strong></div><div class="stat"><small>Przychód</small><strong>' + zl(st.revenue) + '</strong></div><div class="stat"><small>Naliczone userom</small><strong>' + zl(st.credited) + '</strong></div><div class="stat"><small>Do wypłaty LTC</small><strong>' + zl(st.toPay) + '</strong></div><div class="stat"><small>Już wypłacone</small><strong>' + zl(st.paidOut) + '</strong></div><div class="stat"><small>Użytkownicy</small><strong>' + lc(st.users) + '</strong></div></div>' +
+    '<div class="atabs">' + tabs.map((t) => '<button data-t="' + t[0] + '" class="' + (S.adminTab === t[0] ? 'on' : '') + '">' + t[1] + '</button>').join('') + '</div><div style="margin-top:18px">' + body + '</div>';
+  const redo = () => drawAdmin();
+  const act = (sel, fn) => document.querySelectorAll(sel).forEach((b) => b.onclick = async () => { b.disabled = true; try { await fn(b); redo(); } catch (e) { toast(e.message); b.disabled = false; } });
+  document.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { S.adminTab = b.dataset.t; redo(); });
+  act('[data-a]', async (b) => { await api('/api/admin/offers/' + b.dataset.id + '/' + b.dataset.a, 'POST'); toast('Zapisano'); });
+  act('[data-pa]', async (b) => { await api('/api/admin/offers/' + b.dataset.pa + '/proof/accept', 'POST'); toast('Potwierdzono, saldo uzupełnione'); });
+  act('[data-w]', async (b) => { await api('/api/admin/withdrawals/' + b.dataset.id + '/' + b.dataset.w, 'POST'); toast('Zapisano'); });
+  act('[data-n]', async (b) => { await api('/api/admin/announcements/' + b.dataset.n, 'DELETE', {}); toast('Usunięto'); });
+  document.querySelectorAll('[data-pv]').forEach((b) => b.onclick = () => showProof(b.dataset.pv));
+  document.querySelectorAll('[data-cp]').forEach((b) => b.onclick = () => copy(b.dataset.cp));
+  document.querySelectorAll('[data-ar]').forEach((b) => b.onclick = () => askText('Powód odrzucenia', 'np. brak płatności', async (msg) => { try { await api('/api/admin/offers/' + b.dataset.ar + '/reject', 'POST', { msg }); toast('Odrzucono'); redo(); } catch (e) { toast(e.message); } }));
+  document.querySelectorAll('[data-pr]').forEach((b) => b.onclick = () => askText('Powód odrzucenia dowodu', 'np. brak nicku na zrzucie', async (msg) => { try { await api('/api/admin/offers/' + b.dataset.pr + '/proof/reject', 'POST', { msg }); toast('Dowód odrzucony'); redo(); } catch (e) { toast(e.message); } }));
+  const nf = $('#nf');
+  if (nf) nf.onsubmit = async (e) => { e.preventDefault(); $('#nerr').textContent = ''; try { await api('/api/offers', 'POST', { amount: parseInt($('#na').value, 10), link: $('#nl').value, note: $('#nn').value }); toast('Oferta jest aktywna'); redo(); } catch (err) { $('#nerr').textContent = err.message; } };
+  const af = $('#af2');
+  if (af) af.onsubmit = async (e) => { e.preventDefault(); $('#aerr').textContent = ''; try { await api('/api/admin/announcements', 'POST', { text: $('#at').value }); toast('Opublikowano'); redo(); } catch (err) { $('#aerr').textContent = err.message; } };
+}
+
+/* ---------- router ---------- */
+function route_() {
+  document.body.classList.toggle('in', !!S.me);
+  document.body.classList.toggle('local', !S.remote);
+  if (!S.me) { drawAuth(); loadHeroStats(); window.scrollTo({ top: 0 }); return; }
+  const h = location.hash || '#/';
+  renderNav();
+  if (h === '#/sell') return viewSell();
+  if (h === '#/work') return viewWork();
+  if (h === '#/wallet') return viewWallet();
+  if (h === '#/admin') return S.me.role === 'owner' ? viewAdmin() : (location.hash = '#/');
+  return viewHome();
+}
+window.addEventListener('hashchange', route_);
+(async function boot() {
+  try { const r = await fetch('/api/config', { credentials: 'same-origin' }); if (r.ok) { S.cfg = await r.json(); S.remote = true; } } catch (e) { S.remote = false; }
+  $('#bp').textContent = zl(S.cfg.payout);
+  try { S.me = (await api('/api/me')).user; } catch (e) {}
+  route_();
+})();
+
+</script>
+</body>
+</html>
